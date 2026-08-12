@@ -1,0 +1,20 @@
+http:
+  routers:
+    app-http:
+      rule: "Host(`localhost`)"
+      service: app
+      entryPoints:
+        - web
+    app-https:
+      rule: "Host(`localhost`)"
+      service: app
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    app:
+      loadBalancer:
+        servers:
+          - url: "http://app:3000"
