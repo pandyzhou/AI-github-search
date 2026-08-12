@@ -1,6 +1,6 @@
 # GitHub Search Mirror
 
-GitHub Search Mirror 是一个面向开源项目检索和沉淀的 GitHub 仓库搜索镜像站。它把 GitHub 仓库搜索、README 阅读、AI 辅助理解、收藏夹、搜索历史、评论讨论、用户后台和管理后台整合到一个 Next.js 应用里，适合搭建团队内部的开源项目发现入口或个人 GitHub 搜索工作台。
+GitHub Search Mirror 是一个面向开源项目检索和沉淀的 GitHub 仓库搜索镜像站。它把 GitHub 仓库搜索、README 阅读、收藏夹、搜索历史、用户后台和管理后台整合到一个 Next.js 应用里，适合搭建团队内部的开源项目发现入口或个人 GitHub 搜索工作台。
 
 ## 功能特性
 
@@ -8,12 +8,9 @@ GitHub Search Mirror 是一个面向开源项目检索和沉淀的 GitHub 仓库
 - **趋势榜单**：按日、周、月查看 GitHub 趋势仓库，支持语言筛选、热度/Stars/最近更新排序，展示排名、趋势分、估算新增星标数和趋势数据。
 - **仓库详情**：展示仓库基础信息、README、topics、stars、forks、watchers、最近更新时间和 GitHub 原站链接。
 - **仓库健康评分**：详情页侧边栏展示健康评分和风险提示，搜索结果卡片同步显示健康分和首要风险，支持多维度评分（活跃度、社区规模、维护质量、文档完整度、安全合规）。
-- **AI 助手**：支持项目摘要、README 翻译、README 问答，并支持 Claude、OpenAI、Gemini、DeepSeek 和自定义 OpenAI 兼容接口。
-- **AI 仓库选型建议**：搜索结果页可基于当前搜索结果，由 AI 分析并生成选型建议和关注要点。
-- **AI 配置测试**：设置页可直接测试当前 AI Provider/API Key 的连通性，确认配置是否正确。
 - **个人收藏夹**：登录后可创建收藏夹，保存和分类管理感兴趣的仓库。
 - **搜索历史**：登录用户的搜索记录会自动保存，便于回溯和复用搜索条件。
-- **用户设置**：可配置个人 GitHub Token 和 AI Provider/API Key。
+- **用户设置**：可配置个人 GitHub Token。
 - **管理后台**：提供用户管理、搜索/收藏统计分析。
 - **Git 镜像加速**：可配置镜像服务，生成 clone/raw 文件代理地址。
 - **健康检查**：提供 `/api/health`，用于 Docker、反向代理和监控探活。
@@ -26,7 +23,6 @@ GitHub Search Mirror 是一个面向开源项目检索和沉淀的 GitHub 仓库
 - **认证**：NextAuth.js Credentials 登录
 - **搜索**：Meilisearch，失败时可回退 GitHub API 搜索
 - **缓存**：Redis + 内存缓存回退
-- **AI**：Anthropic Claude / OpenAI / Gemini / DeepSeek / 自定义 OpenAI 兼容接口
 - **部署**：Docker + Docker Compose + Next.js standalone output
 
 ## 快速开始
@@ -118,14 +114,8 @@ REDIS_PASSWORD=change_me_redis_password
 | -------------------- | ---------------------------------------------------- |
 | `NEXTAUTH_URL`       | 用户实际访问的站点地址，默认 `http://localhost:3000` |
 | `ADMIN_EMAILS`       | 管理员邮箱列表，多个邮箱用英文逗号分隔               |
-| `GITHUB_TOKEN`       | GitHub API Token，用于提高 API 速率限制              |
-| `MIRROR_BASE_URL`    | Git 镜像服务基础 URL，未配置时回退 GitHub 原站       |
-| `ANTHROPIC_API_KEY`  | Claude API Key                                       |
-| `OPENAI_API_KEY`     | OpenAI API Key                                       |
-| `DEEPSEEK_API_KEY`   | DeepSeek API Key                                     |
-| `GEMINI_API_KEY`     | Gemini API Key                                       |
-| `CUSTOM_AI_BASE_URL` | 自定义 OpenAI 兼容接口地址                           |
-| `CUSTOM_AI_API_KEY`  | 自定义 OpenAI 兼容接口 Key                           |
+| `GITHUB_TOKEN`    | GitHub API Token，用于提高 API 速率限制              |
+| `MIRROR_BASE_URL` | Git 镜像服务基础 URL，未配置时回退 GitHub 原站       |
 
 启动服务：
 
@@ -142,29 +132,6 @@ docker compose logs -f app
 
 Docker Compose 会自动启动 `app`、`postgres`、`meilisearch` 和 `redis`。首次创建 PostgreSQL 数据卷时，`scripts/init.sql` 会初始化业务表；已有旧数据卷时，请按需执行迁移或 `npm run db:push` 同步 schema。
 
-## AI 功能配置
-
-AI 功能可以通过两种方式配置：
-
-1. 在环境变量中配置全局 API Key，例如 `ANTHROPIC_API_KEY`、`OPENAI_API_KEY`。
-2. 登录后进入用户设置页，配置个人 AI Provider、模型、接口地址和 API Key。设置页提供 **测试连接** 按钮，可即时验证 AI 配置是否可用。
-
-支持的 Provider：
-
-- Claude：默认 `claude-sonnet-4-20250514`
-- OpenAI：默认 `gpt-4o`
-- Gemini：默认 `gemini-1.5-pro`
-- DeepSeek：默认 `deepseek-chat`
-- Custom：兼容 OpenAI Chat Completions 格式的自定义接口
-
-自定义 AI 接口必须使用 HTTPS，且不能指向 localhost、内网地址或 metadata 地址。
-
-AI 助手的三个功能页签：
-
-- **摘要**：分析 README 生成项目摘要，快速了解项目用途和特点。
-- **翻译**：将英文 README 翻译为中文。
-- **问答**：基于 README 内容回答用户问题，如安装方法、使用说明等。
-
 ## 项目结构
 
 ```text
@@ -172,7 +139,6 @@ github-search-mirror/
 ├── src/
 │   ├── app/                 # Next.js App Router 页面和 API
 │   │   ├── api/             # Route Handlers
-│   │   │   ├── ai/          # AI 接口（摘要、翻译、问答、推荐、测试）
 │   │   │   └── ...
 │   │   ├── admin/           # 管理后台
 │   │   ├── dashboard/       # 用户后台
@@ -182,10 +148,10 @@ github-search-mirror/
 │   ├── components/          # React 组件
 │   │   ├── dashboard/       # 用户后台组件
 │   │   ├── layout/          # Header / Footer
-│   │   ├── repo/            # README、AI、收藏、健康评分组件
-│   │   └── search/          # 搜索、筛选、结果卡片、AI 选型组件
+│   │   ├── repo/            # README、收藏、健康评分组件
+│   │   └── search/          # 搜索、筛选、结果卡片组件
 │   ├── db/                  # Drizzle schema 和数据库连接（支持 PG / SQLite）
-│   ├── lib/                 # GitHub、AI、缓存、认证、搜索、仓库健康度等工具
+│   ├── lib/                 # GitHub、缓存、认证、搜索、仓库健康度等工具
 │   ├── server/              # Server Actions
 │   └── test/                # 单元测试和性能测试
 ├── scripts/                 # 数据库初始化脚本
@@ -230,12 +196,6 @@ npm run test:coverage
 | `GET /api/health`                              | 服务健康检查        |
 | `GET /api/search`                              | 仓库搜索            |
 | `GET /api/trending`                            | 趋势仓库            |
-| `POST /api/ai/explain`                         | 生成项目摘要        |
-| `POST /api/ai/translate`                       | README 翻译         |
-| `POST /api/ai/explain-code`                    | 代码解释            |
-| `POST /api/ai/readme-qa`                       | README 问答         |
-| `POST /api/ai/recommend`                       | AI 仓库选型建议     |
-| `POST /api/ai/test`                            | AI 配置连通性测试   |
 | `GET/POST /api/collections`                    | 收藏夹              |
 | `GET/POST /api/favorites`                      | 收藏仓库            |
 | `GET /api/mirror/clone/[owner]/[repo]`         | 生成镜像 clone 地址 |
@@ -260,14 +220,11 @@ npm run test:coverage
 - **搜索预设面板**：搜索页新增常用搜索条件预设面板，支持快速切换语言、排序方式等组合条件
 - **仓库对比功能**：支持在仓库详情页将当前仓库加入对比看板，可同时对比多个仓库的关键指标
 - **仓库健康评分**：详情页侧边栏展示健康评分和风险提示，搜索结果卡片同步显示健康分和首要风险
-- **AI 仓库选型建议**：搜索结果页可基于当前搜索结果，由 AI 分析并生成选型建议
-- **AI 配置测试按钮**：设置页可直接测试当前 AI Provider/API Key 的连通性
 - **SQLite 原生支持**：通过 `DATABASE_PROVIDER=sqlite` 环境变量启用，无需 PostgreSQL，适合小规模部署
 
 #### 问题修复
 
 - 修复 SQLite 模式下搜索历史只记录"react"的问题（id 字段缺少自动生成）
-- 修复 AI 助手面板 markdown 渲染留白过多的问题
 - 修复 GitHub 头像在项目详情页无法显示的问题（改用原生 `<img>` 标签）
 - 修复 Docker 构建时 healthcheck 命令在 Alpine 镜像中不兼容的问题
 - 修复 CI 构建中 8 个 TypeScript 类型错误
@@ -276,8 +233,6 @@ npm run test:coverage
 #### 改进优化
 
 - 趋势榜支持语言筛选、热度/Stars/最近更新排序，显示趋势分与估算新增 stars
-- README AI 问答页签改为更精确的答案引用
-- AI 面板布局优化，减少留白，提高信息密度
 - 移除评论/讨论功能，简化项目结构
 
 ### [v0.1.0] - 2026-05-11
@@ -287,10 +242,9 @@ npm run test:coverage
 - **基础搜索**：支持关键词、语言、星标数、fork 数、更新时间、license、topic 等多维度检索
 - **趋势榜单**：按日、周、月查看 GitHub 趋势仓库
 - **仓库详情**：展示 README、topics、stars、forks、watchers 等信息
-- **AI 助手**：支持项目摘要、README 翻译、代码解释、README 问答
 - **个人收藏夹**：登录后可创建收藏夹，保存感兴趣的仓库
 - **搜索历史**：自动保存搜索记录，便于回溯
-- **用户设置**：可配置 GitHub Token 和 AI Provider/API Key
+- **用户设置**：可配置 GitHub Token
 - **管理后台**：提供用户管理和搜索/收藏统计分析
 - **Git 镜像加速**：配置镜像服务生成代理地址
 
@@ -301,7 +255,6 @@ npm run test:coverage
 - NextAuth.js 认证
 - Meilisearch 搜索（GitHub API 回退）
 - Redis + 内存缓存
-- AI 多 Provider 支持（Claude/OpenAI/Gemini/DeepSeek/自定义）
 - Docker + Docker Compose 部署
 - GitHub Actions CI/CD
 - 单元测试和性能测试

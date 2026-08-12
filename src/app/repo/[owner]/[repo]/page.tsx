@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { getRepo, getRepoReadme } from "@/lib/github";
 import { ReadmeViewer } from "@/components/repo/ReadmeViewer";
-import { AIPanel } from "@/components/repo/AIPanel";
 import { RepoHealthCard } from "@/components/repo/RepoHealthCard";
 import { FavoriteButton } from "@/components/repo/FavoriteButton";
 import { RepoFileBrowser } from "@/components/repo/RepoFileBrowser";
@@ -314,11 +313,6 @@ async function RepoContent({ owner, repo }: { owner: string; repo: string }) {
 
         {/* Sidebar */}
         <div className="space-y-4 sm:space-y-5">
-          <AIPanel
-            repoFullName={`${owner}/${repo}`}
-            readme={readme}
-            description={repoData.description || ""}
-          />
           <RepoHealthCard repo={repoData as unknown as import("@/lib/repo-insights").RepoForHealth} />
         </div>
       </div>

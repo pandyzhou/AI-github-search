@@ -4,7 +4,6 @@ import { saveSearchHistory } from "@/server/history.actions";
 import { SearchBox } from "@/components/search/SearchBox";
 import { RepoList } from "@/components/search/RepoList";
 import { SortSelect } from "@/components/search/SortSelect";
-import { AIRecommendationPanel } from "@/components/search/AIRecommendationPanel";
 import { SearchSidebar } from "@/components/search/SearchSidebar";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -179,7 +178,6 @@ async function SearchResults({ params }: { params: SearchParams }) {
             <SortSelect />
           </div>
           <RepoList results={results} searchParams={params} />
-          <AIRecommendationPanel repos={results.results.slice(0, 10)} query={params.q} />
         </>
       )}
     </>

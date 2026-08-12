@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Bot,
   ChevronLeft,
   Code2,
   Copy,
@@ -12,8 +11,6 @@ import {
   Loader2,
   RotateCcw,
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 interface RepoFileBrowserProps {
   owner: string;
@@ -39,8 +36,6 @@ interface FilePayload {
     content: string;
   };
 }
-
-const MAX_AI_CODE_CHARS = 60_000;
 
 function getLanguage(path: string) {
   const ext = path.split(".").pop()?.toLowerCase();
@@ -82,9 +77,6 @@ export function RepoFileBrowser({ owner, repoName }: RepoFileBrowserProps) {
   const [treeError, setTreeError] = useState("");
   const [fileError, setFileError] = useState("");
   const [copied, setCopied] = useState(false);
-  const [explanation, setExplanation] = useState("");
-  const [explainError, setExplainError] = useState("");
-  const [explaining, setExplaining] = useState(false);
 
   const repoPath = `${owner}/${repoName}`;
 
@@ -116,8 +108,6 @@ export function RepoFileBrowser({ owner, repoName }: RepoFileBrowserProps) {
   const openFile = async (item: TreeItem) => {
     setLoadingFile(true);
     setFileError("");
-    setExplanation("");
-    setExplainError("");
     try {
       const response = await fetch(
         `/api/repo/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/file?path=${encodeURIComponent(item.path)}`
@@ -148,29 +138,6 @@ export function RepoFileBrowser({ owner, repoName }: RepoFileBrowserProps) {
       window.setTimeout(() => setCopied(false), 1200);
     } catch {
       setCopied(false);
-    }
-  };
-
-  const explainCode = async () => {
-    if (!selectedFile) return;
-    setExplaining(true);
-    setExplainError("");
-    try {
-      const response = await fetch("/api/ai/explain-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: selectedFile.content.slice(0, MAX_AI_CODE_CHARS),
-          language: getLanguage(selectedFile.path),
-        }),
-      });
-      const data = await response.json().catch(() => ({ error: "代码解释失败" }));
-      if (!response.ok) throw new Error(data.error || "代码解释失败");
-      setExplanation(data.explanation || "暂无解释");
-    } catch (error) {
-      setExplainError(error instanceof Error ? error.message : "代码解释失败");
-    } finally {
-      setExplaining(false);
     }
   };
 
@@ -297,14 +264,6 @@ export function RepoFileBrowser({ owner, repoName }: RepoFileBrowserProps) {
                     <Copy style={{ width: 14, height: 14 }} />
                     {copied ? "已复制" : "复制"}
                   </button>
-                  <button type="button" onClick={explainCode} disabled={explaining} className="btn-primary text-xs">
-                    {explaining ? (
-                      <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" />
-                    ) : (
-                      <Bot style={{ width: 14, height: 14 }} />
-                    )}
-                    AI 解释
-                  </button>
                   <a
                     href={selectedFile.html_url}
                     target="_blank"
@@ -340,26 +299,6 @@ export function RepoFileBrowser({ owner, repoName }: RepoFileBrowserProps) {
                   ))}
                 </pre>
               </div>
-
-              {(explanation || explainError) && (
-                <div className="px-5 py-4" style={{ borderTop: "1px solid var(--color-border)" }}>
-                  <div className="mb-2 flex items-center gap-2">
-                    <Bot style={{ width: 15, height: 15, color: "var(--color-primary)" }} />
-                    <h3 className="text-sm font-semibold" style={{ color: "var(--color-text-heading)" }}>
-                      AI 代码解释
-                    </h3>
-                  </div>
-                  {explainError ? (
-                    <p className="text-sm" style={{ color: "var(--color-error)" }}>
-                      {explainError}
-                    </p>
-                  ) : (
-                    <div className="text-sm leading-relaxed" style={{ color: "var(--color-text-body)" }}>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{explanation}</ReactMarkdown>
-                    </div>
-                  )}
-                </div>
-              )}
             </>
           ) : (
             <div className="flex min-h-72 flex-col items-center justify-center px-4 text-center">
@@ -371,7 +310,7 @@ export function RepoFileBrowser({ owner, repoName }: RepoFileBrowserProps) {
                 选择一个文件开始预览
               </p>
               <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
-                支持查看文本文件，并可直接调用 AI 解释代码。
+                支持查看仓库内的文本文件内容。
               </p>
             </div>
           )}

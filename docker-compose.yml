@@ -19,12 +19,6 @@ services:
       - ADMIN_EMAILS=${ADMIN_EMAILS:-}
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - MIRROR_BASE_URL=${MIRROR_BASE_URL:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - CUSTOM_AI_BASE_URL=${CUSTOM_AI_BASE_URL:-}
-      - CUSTOM_AI_API_KEY=${CUSTOM_AI_API_KEY:-}
       - NODE_ENV=production
     depends_on:
       postgres:

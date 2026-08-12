@@ -68,13 +68,6 @@ export default async function SettingsPage() {
                       name: session.user.name ?? "",
                       githubToken: "",
                       githubTokenConfigured: false,
-                      aiConfig: {
-                        provider: "claude",
-                        model: "",
-                        apiEndpoint: "",
-                        apiKey: "",
-                        apiKeyConfigured: false,
-                      },
                     }
                   }
                 />
