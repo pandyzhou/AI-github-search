@@ -4,8 +4,8 @@ import Link from "next/link";
 import Form from "next/form";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { Search, TrendingUp, User, LayoutDashboard, Command, GitCompareArrows } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import { Search, TrendingUp, User, LayoutDashboard, Command, GitCompareArrows, LogOut, Settings, ChevronDown } from "lucide-react";
 import Image from "next/image";
 
 interface HeaderProps {
@@ -21,6 +21,7 @@ export function Header({ initialSearchQuery = "" }: HeaderProps = {}) {
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   let searchQuery = searchState.value;
 
   if (searchState.initialSearchQuery !== initialSearchQuery) {
@@ -71,6 +72,18 @@ export function Header({ initialSearchQuery = "" }: HeaderProps = {}) {
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-user-menu]")) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [userMenuOpen]);
 
   return (
     <header
@@ -222,24 +235,101 @@ export function Header({ initialSearchQuery = "" }: HeaderProps = {}) {
               style={{ background: "var(--color-border)" }}
             />
             {isAuthenticated ? (
-              <div className="hidden md:flex items-center gap-2">
-                {session?.user?.image ? (
-                  <img
-                    src={session.user.image}
-                    alt={session.user.name || "用户"}
-                    className="w-7 h-7 rounded-full"
-                  />
-                ) : (
+              <div className="hidden md:flex items-center gap-2 relative" data-user-menu>
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors"
+                  style={{
+                    background: userMenuOpen ? "var(--color-bg-hover)" : "transparent",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-bg-hover)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = userMenuOpen ? "var(--color-bg-hover)" : "transparent")}
+                >
+                  {session?.user?.image ? (
+                    <img
+                      src={session.user.image}
+                      alt={session.user.name || "用户"}
+                      className="w-7 h-7 rounded-full"
+                    />
+                  ) : (
+                    <div
+                      className="w-7 h-7 rounded-full flex items-center justify-center"
+                      style={{
+                        background: "var(--color-primary-light)",
+                        color: "var(--color-primary)",
+                        fontSize: "var(--font-size-caption)",
+                        fontWeight: "var(--font-weight-bold)",
+                      }}
+                    >
+                      {(session?.user?.name || "U")[0].toUpperCase()}
+                    </div>
+                  )}
+                  <ChevronDown style={{ width: 14, height: 14, color: "var(--color-text-muted)" }} />
+                </button>
+
+                {userMenuOpen && (
                   <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center"
+                    className="absolute right-0 top-full mt-1 rounded-xl overflow-hidden"
                     style={{
-                      background: "var(--color-primary-light)",
-                      color: "var(--color-primary)",
-                      fontSize: "var(--font-size-caption)",
-                      fontWeight: "var(--font-weight-bold)",
+                      minWidth: 200,
+                      background: "var(--color-bg-card)",
+                      border: "1px solid var(--color-border)",
+                      boxShadow: "var(--shadow-lg)",
+                      zIndex: 100,
                     }}
                   >
-                    {(session?.user?.name || "U")[0].toUpperCase()}
+                    {/* User info */}
+                    <div
+                      className="px-4 py-3"
+                      style={{ borderBottom: "1px solid var(--color-border)" }}
+                    >
+                      <div style={{ fontWeight: "var(--font-weight-bold)", fontSize: "var(--font-size-body)", color: "var(--color-text-heading)" }}>
+                        {session?.user?.name || "用户"}
+                      </div>
+                      <div style={{ fontSize: "var(--font-size-caption)", color: "var(--color-text-muted)" }} className="truncate">
+                        {session?.user?.email}
+                      </div>
+                    </div>
+
+                    {/* Menu items */}
+                    <div className="py-1">
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 transition-colors"
+                        style={{ fontSize: "var(--font-size-body)", color: "var(--color-text-body)" }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-bg-hover)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      >
+                        <LayoutDashboard style={{ width: 15, height: 15 }} />
+                        后台
+                      </Link>
+                      <Link
+                        href="/dashboard/settings"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 transition-colors"
+                        style={{ fontSize: "var(--font-size-body)", color: "var(--color-text-body)" }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-bg-hover)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      >
+                        <Settings style={{ width: 15, height: 15 }} />
+                        设置
+                      </Link>
+                    </div>
+
+                    {/* Sign out */}
+                    <div style={{ borderTop: "1px solid var(--color-border)" }}>
+                      <button
+                        onClick={() => signOut({ callbackUrl: "/login" })}
+                        className="flex items-center gap-2.5 w-full px-4 py-2.5 transition-colors"
+                        style={{ fontSize: "var(--font-size-body)", color: "#ef4444", background: "transparent", border: 0, cursor: "pointer" }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      >
+                        <LogOut style={{ width: 15, height: 15 }} />
+                        退出登录
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
