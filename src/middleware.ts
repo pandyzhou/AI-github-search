@@ -20,11 +20,6 @@ function isStaticAsset(pathname: string): boolean {
     "/robots.txt",
     "/sitemap.xml",
     "/logo.png",
-    "/next.svg",
-    "/vercel.svg",
-    "/file.svg",
-    "/globe.svg",
-    "/window.svg",
     "/context.png",
   ];
   return staticPrefixes.some((p) => pathname === p || pathname.startsWith(p));
