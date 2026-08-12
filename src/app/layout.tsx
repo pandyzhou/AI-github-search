@@ -3,8 +3,8 @@ import "./globals.css";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 
 export const metadata: Metadata = {
-  title: "GitMirror - GitHub 搜索镜像站",
-  description: "GitHub 搜索加速、镜像加速、趋势发现、AI 智能增强",
+  title: "AI GitHub Search - 开源项目搜索与对比工作台",
+  description: "GitHub 搜索、趋势发现、开源项目对比、文件浏览与工作台",
 };
 
 export default function RootLayout({

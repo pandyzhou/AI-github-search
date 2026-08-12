@@ -89,7 +89,7 @@ async function githubFetch<T>(path: string, token?: string): Promise<T> {
 
   const headers: Record<string, string> = {
     Accept: "application/vnd.github.v3+json",
-    "User-Agent": "GitMirror/1.0",
+    "User-Agent": "AI-GitHub-Search/1.0",
   };
 
   if (authToken) {

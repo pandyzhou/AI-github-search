@@ -101,7 +101,7 @@ export function Header({ initialSearchQuery = "" }: HeaderProps = {}) {
           <Link href="/" className="flex items-center gap-2 flex-shrink-0">
             <Image
               src="/logo.png"
-              alt="GitMirror"
+              alt="AI GitHub Search"
               width={32}
               height={32}
               className="rounded-lg"
@@ -115,7 +115,7 @@ export function Header({ initialSearchQuery = "" }: HeaderProps = {}) {
                 color: "var(--color-text-heading)",
               }}
             >
-              GitMirror
+              AI GitHub Search
             </span>
           </Link>
 

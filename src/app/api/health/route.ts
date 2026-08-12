@@ -58,7 +58,7 @@ export async function GET(request: Request) {
     {
       ok,
       status,
-      service: "gitmirror",
+      service: "ai-github-search",
       checks,
       timestamp: new Date().toISOString(),
     },

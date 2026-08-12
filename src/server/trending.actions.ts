@@ -58,7 +58,7 @@ export async function getTrendingRepos(
 
     const headers: HeadersInit = {
       Accept: "application/vnd.github.v3+json",
-      "User-Agent": "github-search-mirror",
+      "User-Agent": "AI-GitHub-Search/1.0",
     };
 
     if (token) {

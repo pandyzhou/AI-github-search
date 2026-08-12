@@ -160,7 +160,7 @@ export default function LoginPage() {
                   fontWeight: "var(--font-weight-semibold)",
                 }}
               >
-                {mode === "login" ? "登录到 GitMirror" : "注册 GitMirror 账号"}
+                {mode === "login" ? "登录到 AI GitHub Search" : "注册 AI GitHub Search 账号"}
               </h1>
               <p className="text-sm mt-1" style={{ color: "var(--color-text-body)" }}>
                 {mode === "login" ? "使用邮箱登录或注册" : "创建你的账号"}

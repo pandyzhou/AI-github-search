@@ -12,7 +12,7 @@ export function Footer() {
       <div className="page-container py-6 sm:py-8">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="GitMirror" width={24} height={24} className="rounded" />
+            <Image src="/logo.png" alt="AI GitHub Search" width={24} height={24} className="rounded" />
             <span
               className="text-sm"
               style={{
@@ -20,7 +20,7 @@ export function Footer() {
                 color: "var(--color-text-heading)",
               }}
             >
-              GitMirror
+              AI GitHub Search
             </span>
           </div>
 
@@ -54,7 +54,7 @@ export function Footer() {
             className="text-xs text-center sm:text-right"
             style={{ color: "var(--color-text-muted)" }}
           >
-            GitMirror - GitHub 搜索镜像站
+            AI GitHub Search - 开源项目搜索与对比工作台
           </p>
         </div>
       </div>
