@@ -296,8 +296,8 @@ export function Header({ initialSearchQuery = "" }: HeaderProps = {}) {
                       <Link
                         href="/dashboard"
                         onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 transition-colors w-full"
-                        style={{ fontSize: "var(--font-size-body)", color: "var(--color-text-body)", textAlign: "left" }}
+                        className="flex items-center gap-2.5 transition-colors w-full"
+                        style={{ padding: "8px 16px", fontSize: "var(--font-size-body)", color: "var(--color-text-body)", textAlign: "left" }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-bg-hover)")}
                         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                       >
@@ -307,8 +307,8 @@ export function Header({ initialSearchQuery = "" }: HeaderProps = {}) {
                       <Link
                         href="/dashboard/settings"
                         onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 transition-colors w-full"
-                        style={{ fontSize: "var(--font-size-body)", color: "var(--color-text-body)", textAlign: "left" }}
+                        className="flex items-center gap-2.5 transition-colors w-full"
+                        style={{ padding: "8px 16px", fontSize: "var(--font-size-body)", color: "var(--color-text-body)", textAlign: "left" }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-bg-hover)")}
                         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                       >
@@ -318,11 +318,20 @@ export function Header({ initialSearchQuery = "" }: HeaderProps = {}) {
                     </div>
 
                     {/* Sign out */}
-                    <div style={{ borderTop: "1px solid var(--color-border)" }}>
+                    <div style={{ borderTop: "1px solid var(--color-border)", padding: "4px 0" }}>
                       <button
                         onClick={() => signOut({ callbackUrl: "/login" })}
-                        className="flex items-center gap-2.5 w-full px-4 py-2 transition-colors"
-                        style={{ fontSize: "var(--font-size-body)", color: "#ef4444", background: "transparent", border: 0, cursor: "pointer", textAlign: "left" }}
+                        className="flex items-center gap-2.5 w-full transition-colors"
+                        style={{
+                          padding: "8px 16px",
+                          fontSize: "var(--font-size-body)",
+                          color: "#ef4444",
+                          background: "transparent",
+                          border: 0,
+                          cursor: "pointer",
+                          textAlign: "left",
+                          width: "100%",
+                        }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
                         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                       >
