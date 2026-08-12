@@ -12,7 +12,6 @@ export const users = sqliteTable("users", {
   name: text("name"),
   avatar: text("avatar"),
   role: text("role", { enum: ["USER", "ADMIN"] }).default("USER"),
-  aiConfig: text("ai_config", { mode: "json" }),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 

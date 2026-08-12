@@ -20,7 +20,6 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 255 }),
   avatar: text("avatar"),
   role: userRoleEnum("role").default("USER"),
-  aiConfig: jsonb("ai_config"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 

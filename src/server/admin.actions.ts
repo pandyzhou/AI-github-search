@@ -1,6 +1,6 @@
 "use server";
 
-import { db, ensureCommentsSchema } from "@/db";
+import { db } from "@/db";
 import { favorites, searchHistory, users } from "@/db/schema";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth/next";
@@ -14,7 +14,6 @@ async function assertAdmin() {
 
 export async function getAdminAnalytics() {
   await assertAdmin();
-  await ensureCommentsSchema();
 
   const [allUsers, allFavorites, allSearches] = await Promise.all([
     db.select().from(users).orderBy(users.createdAt),

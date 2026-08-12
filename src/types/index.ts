@@ -43,37 +43,3 @@ export interface SearchResult {
     topic: { name: string; count: number }[];
   };
 }
-
-export interface TrendingRepo extends RepoItem {
-  rank: number;
-  stars_today: number;
-  trend_score: number;
-}
-
-export interface UserProfile {
-  id: string;
-  email: string | null;
-  name: string | null;
-  avatar: string | null;
-  role: "USER" | "ADMIN";
-}
-
-export interface Collection {
-  id: string;
-  name: string;
-  isPublic: boolean;
-  userId: string;
-  createdAt: string;
-}
-
-export interface Comment {
-  id: string;
-  repoFullName: string;
-  content: string;
-  rating: number | null;
-  userId: string;
-  parentId: string | null;
-  isPinned: boolean;
-  isDeleted: boolean;
-  createdAt: string;
-}

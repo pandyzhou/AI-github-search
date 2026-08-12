@@ -12,7 +12,6 @@ const isSqlite = process.env.DATABASE_PROVIDER === "sqlite";
 let dbInstance: any = null;
 let poolInstance: Pool | null = null;
 let sqliteInstance: Database.Database | null = null;
-let commentsSchemaReady: Promise<void> | null = null;
 let memoryIdSequence = 0;
 
 type TableRecord = Record<string, unknown>;
@@ -152,58 +151,6 @@ function initDb() {
     }
     return null;
   }
-}
-
-export async function ensureCommentsSchema() {
-  if (canUseMemoryDb() || isSqlite) return;
-
-  const pool = getPool();
-  if (!pool) return;
-
-  if (!commentsSchemaReady) {
-    commentsSchemaReady = (async () => {
-      await pool.query(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`).catch(() => undefined);
-
-      await pool.query(`
-        DO $$
-        BEGIN
-          CREATE TYPE user_role AS ENUM ('USER', 'ADMIN');
-        EXCEPTION
-          WHEN duplicate_object THEN NULL;
-        END $$;
-      `);
-
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS users (
-          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-          github_token text,
-          password_hash text,
-          email varchar(255) UNIQUE,
-          name varchar(255),
-          avatar text,
-          role user_role DEFAULT 'USER',
-          ai_config jsonb,
-          created_at timestamp with time zone DEFAULT now()
-        );
-
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS github_token text;
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash text;
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS email varchar(255);
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS name varchar(255);
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar text;
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS role user_role DEFAULT 'USER';
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_config jsonb;
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
-        ALTER TABLE users ALTER COLUMN id SET DEFAULT gen_random_uuid();
-      `);
-    })().catch((error) => {
-      commentsSchemaReady = null;
-      throw error;
-    });
-  }
-
-  await commentsSchemaReady;
 }
 
 export async function checkDatabaseHealth() {

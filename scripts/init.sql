@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS users (
   name varchar(255),
   avatar text,
   role user_role DEFAULT 'USER',
-  ai_config jsonb,
   created_at timestamp with time zone DEFAULT now()
 );
 
@@ -45,20 +44,7 @@ CREATE TABLE IF NOT EXISTS search_history (
   created_at timestamp with time zone DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS comments (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  repo_full_name varchar(255) NOT NULL,
-  content text NOT NULL,
-  rating integer,
-  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  parent_id uuid REFERENCES comments(id) ON DELETE CASCADE,
-  is_pinned boolean DEFAULT false,
-  is_deleted boolean DEFAULT false,
-  created_at timestamp with time zone DEFAULT now()
-);
-
 CREATE INDEX IF NOT EXISTS collections_user_id_idx ON collections(user_id);
 CREATE INDEX IF NOT EXISTS favorites_user_id_idx ON favorites(user_id);
 CREATE INDEX IF NOT EXISTS favorites_collection_id_idx ON favorites(collection_id);
 CREATE INDEX IF NOT EXISTS search_history_user_id_idx ON search_history(user_id);
-CREATE INDEX IF NOT EXISTS comments_repo_full_name_idx ON comments(repo_full_name);
