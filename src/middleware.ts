@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 const PUBLIC_PATHS = ["/login"];
 
@@ -25,14 +26,20 @@ function isStaticAsset(pathname: string): boolean {
   return staticPrefixes.some((p) => pathname === p || pathname.startsWith(p));
 }
 
-function hasSessionToken(request: NextRequest): boolean {
-  const httpToken = request.cookies.get("next-auth.session-token")?.value;
-  const httpsToken = request.cookies.get("__Secure-next-auth.session-token")?.value;
-  return Boolean(httpToken || httpsToken);
+function isHttpsRequest(request: NextRequest): boolean {
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  if (forwardedProto) {
+    return forwardedProto.split(",")[0].trim().toLowerCase() === "https";
+  }
+  return request.nextUrl.protocol === "https:";
 }
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+function buildAuthSecret(): string | undefined {
+  return process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
+}
+
+export async function middleware(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
 
   if (isStaticAsset(pathname)) {
     return NextResponse.next();
@@ -46,9 +53,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (!hasSessionToken(request)) {
+  const token = await getToken({
+    req: request,
+    secureCookie: isHttpsRequest(request),
+    secret: buildAuthSecret(),
+  });
+
+  if (!token) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
+    loginUrl.searchParams.set("callbackUrl", pathname + (search || ""));
     return NextResponse.redirect(loginUrl);
   }
 

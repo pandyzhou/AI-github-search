@@ -12,8 +12,9 @@
 - **个人工作台 (Dashboard)**：
   - 自动记录并保存搜索历史，随时回溯与复用搜索条件。
   - 创建并管理多分类收藏夹，归档感兴趣的开源项目。
-  - 个人设置中支持配置专属 GitHub Token（打破 API 每小时 60 次的限制，提速至 5,000 次/小时）。
-- **全站访问防护**：支持配置全站登录访问拦截，保护搜索历史与系统资源。
+  - 个人设置保留遗留 Token 的安全删除入口，不再把个人密钥用于查询。
+- **GitHub 共享账号池**：管理员可通过 OAuth 或手动方式加入多个 GitHub 账号，分别查看 Core/Search 额度；额度耗尽或 Token 失效时自动切换，并可配置全站上游并发数和并行搜索页数。
+- **全站访问防护**：验证真实 NextAuth 会话后才允许访问搜索与后台，保护共享额度、搜索历史与系统资源。
 - **SQLite / PostgreSQL 双模式**：默认支持 SQLite 免外部数据库极速部署，也支持 PostgreSQL + Meilisearch 高性能生产部署。
 
 ## 🛠️ 技术栈
@@ -60,8 +61,16 @@ PORT=3000
 # 可选：管理员邮箱（注册/创建时自动赋予 ADMIN 权限）
 ADMIN_EMAILS=admin@example.com
 
-# 可选：配置全局 GitHub Token 提升 API 限额
+# 可选：管理员通过 OAuth 向共享账号池新增 GitHub 账号
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+
+# 可选：共享池为空时的兼容兜底 Token
 GITHUB_TOKEN=
+
+# 可选：数据库尚无池配置行时的默认值
+GITHUB_POOL_MAX_CONCURRENCY=4
+GITHUB_POOL_PARALLEL_SEARCH_PAGES=1
 ```
 
 4. 构建并启动服务：
@@ -75,7 +84,7 @@ npm run build
 npm run start
 ```
 
-访问 [http://localhost:3000](http://localhost:3000) 即可开始使用。
+访问 [http://localhost:3000](http://localhost:3000) 即可开始使用。管理员可在 `/admin/github-pool` 管理共享 GitHub 账号和并发配置。
 
 ## 🐳 Docker 部署
 

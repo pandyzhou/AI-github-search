@@ -4,11 +4,12 @@ import { authOptions } from "@/lib/auth";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import Link from "next/link";
-import { BarChart3, Users } from "lucide-react";
+import { BarChart3, Users, KeyRound } from "lucide-react";
 
 const adminNav = [
   { href: "/admin/analytics", label: "数据统计", icon: BarChart3 },
   { href: "/admin/users", label: "用户管理", icon: Users },
+  { href: "/admin/github-pool", label: "GitHub 账号池", icon: KeyRound },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -27,6 +28,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <Header />
       <main className="flex-1 min-h-screen">
         <div className="page-container py-6">
+          <nav className="mb-4 flex gap-2 overflow-x-auto md:hidden">
+            {adminNav.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="btn-secondary flex-shrink-0 text-xs"
+              >
+                <item.icon style={{ width: 14, height: 14 }} />
+                {item.label}
+              </Link>
+            ))}
+          </nav>
           <div className="flex gap-6">
             {/* Sidebar */}
             <aside className="hidden md:block w-52 flex-shrink-0">

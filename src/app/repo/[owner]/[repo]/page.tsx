@@ -8,7 +8,6 @@ import { CompareButton } from "@/components/compare/CompareButton";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getCurrentGitHubToken } from "@/server/github-token";
 import {
   Star,
   GitFork,
@@ -58,10 +57,9 @@ async function RepoContent({ owner, repo }: { owner: string; repo: string }) {
   let error = null;
 
   try {
-    const token = await getCurrentGitHubToken();
-    repoData = await getRepo(owner, repo, token);
+    repoData = await getRepo(owner, repo);
     try {
-      readme = await getRepoReadme(owner, repo, token);
+      readme = await getRepoReadme(owner, repo);
     } catch {
       readme = "";
     }

@@ -7,7 +7,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, Inbox, Filter, ArrowUpDown } from "lucide-react";
 import Link from "next/link";
 import { parseTrendingRange } from "@/lib/search-params";
-import { getCurrentGitHubToken } from "@/server/github-token";
 
 interface TrendingPageProps {
   searchParams: Promise<{
@@ -54,7 +53,7 @@ async function TrendingResults({ searchParams }: TrendingPageProps) {
   let error = null;
 
   try {
-    repos = await getTrendingRepos(range, language || undefined, await getCurrentGitHubToken());
+    repos = await getTrendingRepos(range, language || undefined);
   } catch (e) {
     error = e instanceof Error ? e.message : "获取趋势失败";
   }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTrendingRepos } from "@/server/trending.actions";
+import { resolveGitHubErrorStatus } from "@/lib/github-error";
 import { parseTrendingRange, sanitizeQualifierValue } from "@/lib/search-params";
-import { getCurrentGitHubToken } from "@/server/github-token";
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const range = parseTrendingRange(searchParams.get("range"));
     const lang = sanitizeQualifierValue(searchParams.get("lang"));
 
-    const repos = await getTrendingRepos(range, lang, await getCurrentGitHubToken());
+    const repos = await getTrendingRepos(range, lang);
 
     return NextResponse.json({
       repos,
@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "获取趋势失败";
-    return NextResponse.json({ error: message, repos: [] }, { status: 500 });
+    const status = resolveGitHubErrorStatus(error);
+    return NextResponse.json({ error: message, repos: [] }, { status });
   }
 }

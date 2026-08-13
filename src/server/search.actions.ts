@@ -2,7 +2,7 @@
 
 import { getCache, setCache } from "@/lib/cache";
 import { repoIndex } from "@/lib/search";
-import { searchRepos } from "@/lib/github";
+import { searchRepos, getGitHubPoolConfig } from "@/lib/github";
 import {
   DEFAULT_SEARCH_PAGE,
   DEFAULT_SEARCH_PER_PAGE,
@@ -11,8 +11,15 @@ import {
   clampInteger,
   sanitizeQualifierValue,
 } from "@/lib/search-params";
+import { GitHubSearchWindowError } from "@/lib/github-error";
 import type { RepoItem, SearchFilters, SearchResult } from "@/types";
-import { createHash } from "crypto";
+
+/** GitHub Search API 最多只返回前 1000 条结果。 */
+const GITHUB_SEARCH_MAX_TOTAL = 1000;
+
+/** parallelSearchPages 强制区间。 */
+const MIN_PARALLEL_PAGES = 1;
+const MAX_PARALLEL_PAGES = 5;
 
 function githubRepoToItem(repo: {
   full_name: string;
@@ -134,53 +141,106 @@ function buildGitHubQuery(query: string, filters: SearchFilters): string {
   return parts.join(" ");
 }
 
+interface GitHubFallbackOptions {
+  sort?: "stars" | "forks" | "updated";
+  order?: "desc" | "asc";
+  page: number;
+  perPage: number;
+  parallelPages: number;
+}
+
+/**
+ * GitHub 直查 fallback：并行抓取 N 个子页，顺序合并并按 full_name 去重。
+ *
+ * 外层第 K 页对应 GitHub 子页 (K-1)*N+1..K*N，每页 per_page=P。
+ * 受底层 github.ts 全局并发池约束。GitHub Search 最多返回前 1000 条，
+ * 超出窗口的子页不会被请求；最后一个外层页可能只覆盖部分子页。
+ */
 async function searchGitHub(
   query: string,
   filters: SearchFilters,
-  options: {
-    sort?: "stars" | "forks" | "updated";
-    order?: "desc" | "asc";
-    page?: number;
-    perPage?: number;
-  },
-  token?: string
+  options: GitHubFallbackOptions
 ): Promise<SearchResult> {
+  const { page: K, perPage: P, parallelPages: N } = options;
+  const effectivePerPage = P * N;
+
+  const emptyResult: SearchResult = {
+    total: 0,
+    page: K,
+    per_page: effectivePerPage,
+    results: [],
+    facets: { language: [], license: [], topic: [] },
+    actual_total: 0,
+    truncated: false,
+  };
+
   const githubQuery = buildGitHubQuery(query, filters);
   if (!githubQuery) {
-    return {
-      total: 0,
-      page: options.page ?? 1,
-      per_page: options.perPage ?? 20,
-      results: [],
-      facets: { language: [], license: [], topic: [] },
-    };
+    return emptyResult;
   }
 
-  const githubResult = await searchRepos(
-    githubQuery,
-    {
-      sort: options.sort,
-      order: options.order,
-      page: options.page,
-      perPage: options.perPage,
-    },
-    token
+  const startSubPage = (K - 1) * N + 1;
+  // GitHub Search 硬约束：page * per_page <= 1000。
+  const maxSubPage = Math.floor(GITHUB_SEARCH_MAX_TOTAL / P);
+
+  // 外层页整体越过 1000 窗口：结构化 422，不返回假 total=0。
+  if (startSubPage > maxSubPage) {
+    throw new GitHubSearchWindowError(
+      `GitHub 搜索结果最多仅提供前 ${GITHUB_SEARCH_MAX_TOTAL} 条，第 ${K} 页已超出可访问范围`
+    );
+  }
+
+  const subPages: number[] = [];
+  for (let i = 0; i < N; i++) {
+    const subPage = startSubPage + i;
+    if (subPage > maxSubPage) break; // 不请求超出 1000 窗口的子页
+    if (subPage < 1) continue;
+    subPages.push(subPage);
+  }
+
+  if (subPages.length === 0) {
+    return emptyResult;
+  }
+
+  // 各子页请求由底层 github.ts 统一并发池控制。
+  const responses = await Promise.all(
+    subPages.map((subPage) =>
+      searchRepos(githubQuery, {
+        sort: options.sort,
+        order: options.order,
+        page: subPage,
+        perPage: P,
+      })
+    )
   );
 
+  // 顺序合并 + full_name 去重，保持 GitHub 排序稳定。
+  const seen = new Set<string>();
+  const merged: RepoItem[] = [];
+  for (const resp of responses) {
+    for (const item of resp.items) {
+      if (seen.has(item.full_name)) continue;
+      seen.add(item.full_name);
+      merged.push(githubRepoToItem(item));
+    }
+  }
+
+  // 用于分页展示的 total 封顶为 1000；actual_total 保留原始值并标记截断。
+  const actualTotal = responses[0]?.total_count ?? 0;
+  const total = Math.min(actualTotal, GITHUB_SEARCH_MAX_TOTAL);
+
   return {
-    total: githubResult.total_count,
-    page: options.page ?? 1,
-    per_page: options.perPage ?? 20,
-    results: githubResult.items.map(githubRepoToItem),
+    total,
+    page: K,
+    per_page: effectivePerPage,
+    results: merged,
     facets: { language: [], license: [], topic: [] },
+    actual_total: actualTotal,
+    truncated: actualTotal > GITHUB_SEARCH_MAX_TOTAL,
   };
 }
 
 const SEARCH_CACHE_TTL_SECONDS = 300;
-
-function tokenCacheScope(token?: string) {
-  return token ? createHash("sha256").update(token).digest("hex").slice(0, 16) : "public";
-}
 
 export async function searchRepositories(
   query: string,
@@ -190,72 +250,96 @@ export async function searchRepositories(
     order?: "desc" | "asc";
     page?: number;
     perPage?: number;
-  } = {},
-  token?: string
+  } = {}
 ): Promise<SearchResult> {
   const page = clampInteger(options.page, DEFAULT_SEARCH_PAGE, 1, MAX_SEARCH_PAGE);
   const perPage = clampInteger(options.perPage, DEFAULT_SEARCH_PER_PAGE, 1, MAX_SEARCH_PER_PAGE);
+
+  const config = await getGitHubPoolConfig();
+  const parallelPages = Math.min(
+    Math.max(config.parallelSearchPages, MIN_PARALLEL_PAGES),
+    MAX_PARALLEL_PAGES
+  );
+  const effectivePerPage = perPage * parallelPages;
   const safeQuery = query.trim().slice(0, 256);
   const safeFilters = sanitizeFilters(filters);
-  const cacheKey = `search:v3:${tokenCacheScope(token)}:${safeQuery}:${JSON.stringify(safeFilters)}:sort=${options.sort ?? "relevance"}:order=${options.order ?? "desc"}:page=${page}:perPage=${perPage}`;
+
+  const cacheKey = `search:v5:public:${safeQuery}:${JSON.stringify(safeFilters)}:sort=${options.sort ?? "relevance"}:order=${options.order ?? "desc"}:page=${page}:perPage=${perPage}:n=${parallelPages}`;
   const cached = await getCache<SearchResult>(cacheKey);
   if (cached) return cached;
 
+  const fallbackOptions: GitHubFallbackOptions = {
+    sort: options.sort,
+    order: options.order,
+    page,
+    perPage,
+    parallelPages,
+  };
+
+  const githubQuery = buildGitHubQuery(safeQuery, safeFilters);
+
+  // 1) 仅尝试 Meilisearch；失败/空命中触发一次 GitHub fallback。
+  let meiliResult;
   try {
     const meiliFilters = buildMeiliFilter(safeFilters);
-    // Map sort field to Meilisearch sortable attribute
     const meiliSortField = options.sort === "updated" ? "updated_at" : options.sort;
-    const meiliResult = await repoIndex.search(safeQuery, {
+    meiliResult = await repoIndex.search(safeQuery, {
       filter: meiliFilters,
       sort: meiliSortField ? [`${meiliSortField}:${options.order ?? "desc"}`] : undefined,
       attributesToSearchOn: safeFilters.in?.length ? safeFilters.in : undefined,
-      limit: perPage,
-      offset: (page - 1) * perPage,
+      // 为与 GitHub fallback 分页契约一致，每个外层页返回 P*N 条。
+      limit: effectivePerPage,
+      offset: (page - 1) * effectivePerPage,
     });
-
-    const results: RepoItem[] = meiliResult.hits.map((hit: Record<string, unknown>) => ({
-      full_name: String(hit.full_name),
-      name: String(hit.name),
-      owner: String(hit.owner),
-      description: hit.description ? String(hit.description) : null,
-      stars: Number(hit.stars),
-      forks: Number(hit.forks),
-      open_issues: Number(hit.open_issues),
-      watchers: Number(hit.watchers),
-      language: hit.language ? String(hit.language) : null,
-      topics: Array.isArray(hit.topics) ? hit.topics.map(String) : [],
-      license: hit.license ? String(hit.license) : null,
-      created_at: String(hit.created_at),
-      pushed_at: String(hit.pushed_at),
-      updated_at: String(hit.updated_at),
-      homepage: hit.homepage ? String(hit.homepage) : null,
-      html_url: String(hit.html_url),
-    }));
-
-    if (results.length === 0 && buildGitHubQuery(safeQuery, safeFilters)) {
-      const fallbackResult = await searchGitHub(
-        safeQuery,
-        safeFilters,
-        { ...options, page, perPage },
-        token
-      );
-      await setCache(cacheKey, fallbackResult, SEARCH_CACHE_TTL_SECONDS);
-      return fallbackResult;
-    }
-
-    const result: SearchResult = {
-      total: meiliResult.estimatedTotalHits ?? 0,
-      page,
-      per_page: perPage,
-      results,
-      facets: { language: [], license: [], topic: [] },
-    };
-
-    await setCache(cacheKey, result, SEARCH_CACHE_TTL_SECONDS);
-    return result;
   } catch {
-    const result = await searchGitHub(safeQuery, safeFilters, { ...options, page, perPage }, token);
-    await setCache(cacheKey, result, SEARCH_CACHE_TTL_SECONDS);
-    return result;
+    // Meilisearch 不可用：GitHub fallback 仅执行一次，错误直接向上传播。
+    const fallbackResult = await searchGitHub(safeQuery, safeFilters, fallbackOptions);
+    await setCache(cacheKey, fallbackResult, SEARCH_CACHE_TTL_SECONDS);
+    return fallbackResult;
   }
+
+  const hits = (meiliResult.hits ?? []) as Array<Record<string, unknown>>;
+  // 只接受明确标记为公开的索引记录；旧索引缺少 private 字段时回退 GitHub，避免可见性不明的数据进入共享缓存。
+  const publicHits = hits.filter((hit) => hit.private === false);
+
+  const results: RepoItem[] = publicHits.map((hit) => ({
+    full_name: String(hit.full_name),
+    name: String(hit.name),
+    owner: String(hit.owner),
+    description: hit.description ? String(hit.description) : null,
+    stars: Number(hit.stars),
+    forks: Number(hit.forks),
+    open_issues: Number(hit.open_issues),
+    watchers: Number(hit.watchers),
+    language: hit.language ? String(hit.language) : null,
+    topics: Array.isArray(hit.topics) ? hit.topics.map(String) : [],
+    license: hit.license ? String(hit.license) : null,
+    created_at: String(hit.created_at),
+    pushed_at: String(hit.pushed_at),
+    updated_at: String(hit.updated_at),
+    homepage: hit.homepage ? String(hit.homepage) : null,
+    html_url: String(hit.html_url),
+  }));
+
+  // Meilisearch 命中时不上 GitHub；本地索引无 1000 条限制。
+  if (results.length === 0 && githubQuery) {
+    const fallbackResult = await searchGitHub(safeQuery, safeFilters, fallbackOptions);
+    await setCache(cacheKey, fallbackResult, SEARCH_CACHE_TTL_SECONDS);
+    return fallbackResult;
+  }
+
+  const estimatedTotal = meiliResult.estimatedTotalHits ?? 0;
+
+  const result: SearchResult = {
+    total: estimatedTotal,
+    page,
+    per_page: effectivePerPage,
+    results,
+    facets: { language: [], license: [], topic: [] },
+    actual_total: estimatedTotal,
+    truncated: false,
+  };
+
+  await setCache(cacheKey, result, SEARCH_CACHE_TTL_SECONDS);
+  return result;
 }

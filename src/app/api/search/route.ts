@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchRepositories } from "@/server/search.actions";
-import { getCurrentGitHubToken } from "@/server/github-token";
 import { buildSearchRequest } from "@/lib/search-request";
+import { resolveGitHubErrorStatus } from "@/lib/github-error";
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,23 +20,18 @@ export async function GET(request: NextRequest) {
       },
       { includePerPage: true }
     );
-    const token = await getCurrentGitHubToken();
 
-    const result = await searchRepositories(
-      searchRequest.searchQuery,
-      searchRequest.filters,
-      {
-        sort: searchRequest.sort,
-        order: searchRequest.order,
-        page: searchRequest.page,
-        perPage: searchRequest.perPage,
-      },
-      token
-    );
+    const result = await searchRepositories(searchRequest.searchQuery, searchRequest.filters, {
+      sort: searchRequest.sort,
+      order: searchRequest.order,
+      page: searchRequest.page,
+      perPage: searchRequest.perPage,
+    });
 
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "搜索失败";
+    const status = resolveGitHubErrorStatus(error);
     return NextResponse.json(
       {
         error: message,
@@ -46,7 +41,7 @@ export async function GET(request: NextRequest) {
         results: [],
         facets: { language: [], license: [], topic: [] },
       },
-      { status: 500 }
+      { status }
     );
   }
 }

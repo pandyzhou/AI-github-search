@@ -12,7 +12,6 @@ import { Search, Inbox, Sparkles, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { getGitHubTokenForUser } from "@/server/github-token";
 import { buildSearchRequest } from "@/lib/search-request";
 
 interface SearchParams {
@@ -41,7 +40,6 @@ async function SearchResults({ params }: { params: SearchParams }) {
   if (searchRequest.normalizedQuery) {
     try {
       const session = await getServerSession(authOptions);
-      const token = await getGitHubTokenForUser(session?.user?.id);
       results = await searchRepositories(
         searchRequest.searchQuery,
         searchRequest.filters,
@@ -50,8 +48,7 @@ async function SearchResults({ params }: { params: SearchParams }) {
           perPage: searchRequest.perPage,
           sort: searchRequest.sort,
           order: searchRequest.order,
-        },
-        token
+        }
       );
       if (session?.user?.id) {
         try {

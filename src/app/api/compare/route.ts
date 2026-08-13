@@ -1,6 +1,6 @@
 import { getRepo, getRepoLanguages } from "@/lib/github";
 import { calculateRepoHealth } from "@/lib/repo-insights";
-import { getCurrentGitHubToken } from "@/server/github-token";
+import { resolveGitHubErrorStatus } from "@/lib/github-error";
 import { NextRequest, NextResponse } from "next/server";
 
 const REPO_FULL_NAME_RE = /^[\w.-]+\/[\w.-]+$/;
@@ -25,13 +25,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid repository list" }, { status: 400 });
     }
 
-    const token = await getCurrentGitHubToken();
     const settled = await Promise.allSettled(
       repoNames.map(async (fullName) => {
         const [owner, repo] = fullName.split("/");
         const [repoData, languages] = await Promise.all([
-          getRepo(owner, repo, token),
-          getRepoLanguages(owner, repo, token).catch(() => ({} as Record<string, number>)),
+          getRepo(owner, repo),
+          getRepoLanguages(owner, repo).catch(() => ({} as Record<string, number>)),
         ]);
         const health = calculateRepoHealth({
           full_name: repoData.full_name,
@@ -96,6 +95,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Compare request failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: resolveGitHubErrorStatus(error) });
   }
 }

@@ -21,6 +21,8 @@ interface MemoryStorage {
   collections: TableRecord[];
   favorites: TableRecord[];
   searchHistory: TableRecord[];
+  githubTokens: TableRecord[];
+  githubPoolConfig: TableRecord[];
 }
 
 interface FilterCondition {
@@ -51,6 +53,8 @@ const memoryStorage: MemoryStorage = {
   collections: [],
   favorites: [],
   searchHistory: [],
+  githubTokens: [],
+  githubPoolConfig: [],
 };
 
 function canUseMemoryDb() {
@@ -94,7 +98,6 @@ function getSqliteDb() {
       name TEXT,
       avatar TEXT,
       role TEXT DEFAULT 'USER',
-      ai_config TEXT,
       created_at INTEGER
     );
 
@@ -123,6 +126,101 @@ function getSqliteDb() {
       user_id TEXT,
       created_at INTEGER
     );
+
+    CREATE TABLE IF NOT EXISTS github_tokens (
+      id TEXT PRIMARY KEY,
+      label TEXT,
+      source TEXT,
+      github_user_id TEXT,
+      github_login TEXT,
+      avatar_url TEXT,
+      encrypted_token TEXT,
+      fingerprint TEXT,
+      enabled INTEGER DEFAULT 1,
+      status TEXT DEFAULT 'active',
+      scopes TEXT,
+      core_limit INTEGER,
+      core_limit_remaining INTEGER,
+      core_limit_reset_at INTEGER,
+      search_limit INTEGER,
+      search_limit_remaining INTEGER,
+      search_limit_reset_at INTEGER,
+      cooldown_until INTEGER,
+      last_error TEXT,
+      last_used_at INTEGER,
+      last_checked_at INTEGER,
+      created_at INTEGER,
+      updated_at INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS github_pool_config (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      max_concurrency INTEGER DEFAULT 4,
+      parallel_search_pages INTEGER DEFAULT 1,
+      created_at INTEGER,
+      updated_at INTEGER,
+      CHECK (id = 1)
+    );
+  `);
+
+  // 兼容旧版本不完整的同名表：通过 PRAGMA table_info 检测缺失列并 ALTER TABLE 补列。
+  const ensureColumns = (
+    table: string,
+    columns: Array<{ name: string; def: string }>
+  ) => {
+    const existing = new Set(
+      sqliteInstance!.prepare(`PRAGMA table_info(${table})`).all().map(
+        (row: unknown) => (row as { name: string }).name
+      )
+    );
+    for (const col of columns) {
+      if (!existing.has(col.name)) {
+        sqliteInstance!.exec(`ALTER TABLE ${table} ADD COLUMN ${col.def};`);
+      }
+    }
+  };
+
+  ensureColumns("github_tokens", [
+    { name: "label", def: "label TEXT" },
+    { name: "source", def: "source TEXT" },
+    { name: "github_user_id", def: "github_user_id TEXT" },
+    { name: "github_login", def: "github_login TEXT" },
+    { name: "avatar_url", def: "avatar_url TEXT" },
+    { name: "encrypted_token", def: "encrypted_token TEXT" },
+    { name: "fingerprint", def: "fingerprint TEXT" },
+    { name: "enabled", def: "enabled INTEGER DEFAULT 1" },
+    { name: "status", def: "status TEXT DEFAULT 'active'" },
+    { name: "scopes", def: "scopes TEXT" },
+    { name: "core_limit", def: "core_limit INTEGER" },
+    { name: "core_limit_remaining", def: "core_limit_remaining INTEGER" },
+    { name: "core_limit_reset_at", def: "core_limit_reset_at INTEGER" },
+    { name: "search_limit", def: "search_limit INTEGER" },
+    { name: "search_limit_remaining", def: "search_limit_remaining INTEGER" },
+    { name: "search_limit_reset_at", def: "search_limit_reset_at INTEGER" },
+    { name: "cooldown_until", def: "cooldown_until INTEGER" },
+    { name: "last_error", def: "last_error TEXT" },
+    { name: "last_used_at", def: "last_used_at INTEGER" },
+    { name: "last_checked_at", def: "last_checked_at INTEGER" },
+    { name: "created_at", def: "created_at INTEGER" },
+    { name: "updated_at", def: "updated_at INTEGER" },
+  ]);
+
+  ensureColumns("github_pool_config", [
+    { name: "max_concurrency", def: "max_concurrency INTEGER DEFAULT 4" },
+    { name: "parallel_search_pages", def: "parallel_search_pages INTEGER DEFAULT 1" },
+    { name: "created_at", def: "created_at INTEGER" },
+    { name: "updated_at", def: "updated_at INTEGER" },
+  ]);
+
+  // SQLite 无法 ALTER TABLE ADD CONSTRAINT，改用唯一索引保证 fingerprint / github_user_id 唯一。
+  sqliteInstance.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS github_tokens_fingerprint_unique
+      ON github_tokens(fingerprint);
+    CREATE UNIQUE INDEX IF NOT EXISTS github_tokens_github_user_id_unique
+      ON github_tokens(github_user_id);
+    CREATE INDEX IF NOT EXISTS github_tokens_enabled_idx ON github_tokens(enabled);
+    CREATE INDEX IF NOT EXISTS github_tokens_status_idx ON github_tokens(status);
+    CREATE INDEX IF NOT EXISTS github_tokens_github_user_id_idx ON github_tokens(github_user_id);
   `);
   return sqliteInstance;
 }
@@ -190,6 +288,8 @@ function getTableName(table: unknown): keyof MemoryStorage {
   if (name === "collections") return "collections";
   if (name === "favorites") return "favorites";
   if (name === "search_history") return "searchHistory";
+  if (name === "github_tokens") return "githubTokens";
+  if (name === "github_pool_config") return "githubPoolConfig";
   return "users";
 }
 

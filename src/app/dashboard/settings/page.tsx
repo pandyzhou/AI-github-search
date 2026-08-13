@@ -66,7 +66,6 @@ export default async function SettingsPage() {
                   initialSettings={
                     settings ?? {
                       name: session.user.name ?? "",
-                      githubToken: "",
                       githubTokenConfigured: false,
                     }
                   }

@@ -1,5 +1,5 @@
 import { getRepoFileContent } from "@/lib/github";
-import { getCurrentGitHubToken } from "@/server/github-token";
+import { resolveGitHubErrorStatus } from "@/lib/github-error";
 import { NextRequest, NextResponse } from "next/server";
 
 const REPO_NAME_RE = /^[\w.-]+$/;
@@ -33,7 +33,7 @@ export async function GET(
       return NextResponse.json({ error: "File path is required" }, { status: 400 });
     }
 
-    const file = await getRepoFileContent(owner, repo, path, await getCurrentGitHubToken());
+    const file = await getRepoFileContent(owner, repo, path);
     if (file.size > MAX_FILE_SIZE_BYTES) {
       return NextResponse.json(
         { error: "File is too large to preview safely" },
@@ -55,6 +55,6 @@ export async function GET(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load file";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: resolveGitHubErrorStatus(error) });
   }
 }

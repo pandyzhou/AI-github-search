@@ -42,4 +42,8 @@ export interface SearchResult {
     license: { name: string; count: number }[];
     topic: { name: string; count: number }[];
   };
+  /** GitHub Search 真实命中总数（未做 1000 封顶）。 */
+  actual_total?: number;
+  /** 是否因 GitHub Search 1000 条窗口而截断。 */
+  truncated?: boolean;
 }

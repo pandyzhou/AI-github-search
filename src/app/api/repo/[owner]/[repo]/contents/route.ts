@@ -1,5 +1,5 @@
 import { getRepoContents } from "@/lib/github";
-import { getCurrentGitHubToken } from "@/server/github-token";
+import { resolveGitHubErrorStatus } from "@/lib/github-error";
 import { NextRequest, NextResponse } from "next/server";
 
 const REPO_NAME_RE = /^[\w.-]+$/;
@@ -32,7 +32,7 @@ export async function GET(
       return NextResponse.json({ error: "Invalid path" }, { status: 400 });
     }
 
-    const items = await getRepoContents(owner, repo, path, await getCurrentGitHubToken());
+    const items = await getRepoContents(owner, repo, path);
     return NextResponse.json({
       path,
       items: items.map((item) => ({
@@ -47,6 +47,6 @@ export async function GET(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load repository contents";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: resolveGitHubErrorStatus(error) });
   }
 }
